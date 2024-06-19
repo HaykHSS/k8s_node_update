@@ -4,4 +4,4 @@ Process is interactive so you need to perform actions in order to get desired re
 
 1. After running it you can choose full upgrade to do all the steps one after one
 2. You can stop the script after each step after which you can run it again and choose 'start from preferred step' to continute from last step
-3. You need to provision node name on which you want do do upgrade
+3. You need to provision node name on which you want to do upgrade
