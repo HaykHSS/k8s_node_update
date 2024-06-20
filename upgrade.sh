@@ -57,12 +57,9 @@ function drain_node {
     return 1
   fi
 
-  # Continuously check if the node is cleared of non-daemonset and non-static pods
   while true; do
     local pod_count=$(check_pods $1)
     echo "Remaining pods: $pod_count"
-    echo "tandz: $pod_count"
-    echo "xndzor: $1"
 
     if [ "$pod_count" -eq 0 ]; then
       echo "Node $1 drained successfully."
@@ -73,6 +70,7 @@ function drain_node {
     fi
   done
 }
+
 # function upgrade_node {
 #   echo "Upgrading kubelet and kubectl..."
 #   (sudo apt-mark unhold kubelet kubectl && \
@@ -88,15 +86,41 @@ function drain_node {
 # }
 
 
+
 function upgrade_node {
-  echo "Upgrading Minikube..."
+  echo "Upgrading Minikube, kubelet, and kubectl..."
+  
   (curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64 \
   && sudo install minikube-linux-amd64 /usr/local/bin/minikube) &
+  pid_minikube=$!
+  wait $pid_minikube
+  local exit_code_minikube=$?
+  if [ $exit_code_minikube -ne 0 ]; then
+    echo "Failed to upgrade Minikube."
+    return 1
+  fi
+  echo "Minikube upgraded successfully."
+
+  (sudo apt-mark unhold kubectl && \
+   sudo apt-get update && \
+   sudo apt-get install -y kubectl && \
+   sudo apt-mark hold kubectl && \
+   sudo systemctl daemon-reload ) &
+  pid_kube=$!
+  wait $pid_kube
+  local exit_code_kube=$?
+  if [ $exit_code_kube -ne 0 ]; then
+    echo "Failed to upgrade kubectl."
+    return 1
+  fi
+  echo "kubectl upgraded successfully."
+
   validate_step \
-    "Minikube upgraded successfully." \
-    "Failed to upgrade Minikube." \
+    "All components upgraded successfully." \
+    "Upgrade validation failed." \
     "minikube version | grep -q $(curl -s https://api.github.com/repos/kubernetes/minikube/releases/latest | jq -r .tag_name)"
 }
+
 
 function uncordon_node {
   echo "Uncordoning node $1..."
